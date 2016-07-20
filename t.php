@@ -12,7 +12,7 @@ function run()
 	echo "123";
 }
 $_POST['123'] = 123;
-class WebThread1 extends CoThread
+class WebThread1 extends Coroutine
 {
 	private $_GET=[];
 	private $_POST=[];

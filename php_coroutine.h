@@ -15,35 +15,27 @@
   | Author:                                                              |
   +----------------------------------------------------------------------+
 */
-
+ 
 /* $Id$ */
 
-#ifndef PHP_COPHP_H
-#define PHP_COPHP_H
 
-extern zend_module_entry cophp_module_entry;
-#define phpext_cophp_ptr &cophp_module_entry
 
-#define PHP_COPHP_VERSION "0.1.0" /* Replace with version number for your extension */
 
-#define COTHREAD_VM_STACK_INIT_SIZE 512
+#define COROUTINE_VM_STACK_INIT_SIZE 512
 
 #ifdef PHP_WIN32
-#	define PHP_COPHP_API __declspec(dllexport)
 #elif defined(__GNUC__) && __GNUC__ >= 4
-#	define PHP_COPHP_API __attribute__ ((visibility("default")))
 #else
-#	define PHP_COPHP_API
 #endif
 
 #ifdef ZTS
 #include "TSRM.h"
 #endif
 
-#define Z_COTHREAD_CONTEXT_P(z) ((cothread_context *)(zend_read_property(cothread_ce,(z),"context",7,1,NULL)->value.lval))
-#define COTHREAD_SYMBOL_TABLE(ctx) (ctx)->symbol_table
-#define COTHREAD_SYMBOL_TABLE_P(ctx) &(COTHREAD_SYMBOL_TABLE(ctx))
-#define CO_G(v) cothread_globals.v
+#define Z_COROUTINE_CONTEXT_P(z) ((coroutine_context *)(zend_read_property(coroutine_ce,(z),"context",7,1,NULL)->value.lval))
+#define COROUTINE_SYMBOL_TABLE(ctx) (ctx)->symbol_table
+#define COROUTINE_SYMBOL_TABLE_P(ctx) &(COROUTINE_SYMBOL_TABLE(ctx))
+#define CO_G(v) coroutine_globals.v
 #define CURRCO(v) CO_G(context)->v
 
 static zend_always_inline void i_init_execute_data(zend_execute_data *execute_data, zend_op_array *op_array, zval *return_value) /* {{{ */
@@ -141,7 +133,7 @@ static zend_always_inline void i_init_execute_data(zend_execute_data *execute_da
 
 
 
-struct _cothread_context{
+struct _coroutine_context{
 	/* CoThread instance */
 	zend_object* this_obj;
 	
@@ -149,7 +141,7 @@ struct _cothread_context{
 	zend_execute_data *execute_data;
 	
 	zend_execute_data *top_execute_data;
-	/* The separate stack used by cothread */
+	/* The separate stack used by coroutine */
 	zend_vm_stack stack;
 
 	zend_fcall_info_cache *fci_cache;
@@ -162,17 +154,17 @@ struct _cothread_context{
 
 };
 
-typedef struct _cothread_context cothread_context;
+typedef struct _coroutine_context coroutine_context;
 
-struct _cothread_globals{
-	cothread_context 	*context;
+struct _coroutine_globals{
+	coroutine_context 	*context;
 	zend_execute_data 	*main_execute_data;
 	zend_class_entry 	*main_scope;
 	zend_vm_stack 		 main_stack;
 	void				*cache_handler;
 	HashTable			*shutdown_function_names;
 
-} cothread_globals;
+} coroutine_globals;
 
 
 
@@ -180,19 +172,14 @@ struct _cothread_globals{
   	Declare any global variables you may need between the BEGIN
 	and END macros here:
 
-ZEND_BEGIN_MODULE_GLOBALS(cophp)
 	zend_long  global_value;
 	char *global_string;
-ZEND_END_MODULE_GLOBALS(cophp)
 */
 
-/* Always refer to the globals in your function as COPHP_G(variable).
    You are encouraged to rename these macros something shorter, see
    examples in any other php module directory.
 */
-#define COPHP_G(v) ZEND_MODULE_GLOBALS_ACCESSOR(cophp, v)
 
-#if defined(ZTS) && defined(COMPILE_DL_COPHP)
 ZEND_TSRMLS_CACHE_EXTERN()
 #endif
 
@@ -245,7 +232,6 @@ register zend_execute_data* volatile execute_data __asm__(ZEND_VM_FP_GLOBAL_REG)
 
 
 
-#endif	/* PHP_COPHP_H */
 
 
 /*
