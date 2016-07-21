@@ -54,3 +54,4 @@ Access:Public
 #注意
 1. 当前版本不支持在协程中对另一个协程resume操作
 2. 协程中会对register_shutdown_function的函数进行拦截,并在协程结束后调用
+3. 不能在内部函数回调后 Coroutine->yield,必须等内部函数全部执行完后才能Coroutine->yield
