@@ -30,9 +30,27 @@ result:123
 3. 传入闭包(Closure):$co = new Coroutine(function(){});
 
 ###Coroutine::resume()
+
+开始\恢复 Coroutine运行;
+
 ###Coroutine::yield()
+
+中断Coroutine,程序返回到调用 resume的点
+
 ###Coroutine::running()
 ###Coroutine::reset();
 
 ##Properties
 ###$status
+
+当前协程状态
+Access:Public
+
+###Constants
+STATUS_SUSPEND = 0;
+STATUS_RUNNING = 1;
+STATUS_DEAD = 2;
+
+#注意
+1. 当前版本不支持在协程中对另一个协程resume操作
+2. 协程中会对register_shutdown_function的函数进行拦截,并在协程结束后调用
