@@ -47,9 +47,9 @@ result:123
 Access:Public
 
 ###Constants
-STATUS_SUSPEND = 0;
-STATUS_RUNNING = 1;
-STATUS_DEAD = 2;
+* STATUS_SUSPEND = 0;
+* STATUS_RUNNING = 1;
+* STATUS_DEAD = 2;
 
 #注意
 1. 当前版本不支持在协程中对另一个协程resume操作
