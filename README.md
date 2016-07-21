@@ -38,7 +38,12 @@ result:123
 中断Coroutine,程序返回到调用 resume的点
 
 ###Coroutine::running()
+
+返回当前协程实例
+
 ###Coroutine::reset();
+
+当协程执行结束后,调用reset可以使协程回到刚创建时候的状态
 
 ##Properties
 ###$status
