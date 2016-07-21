@@ -1,4 +1,4 @@
-# php-coroutine (Beta)
+# php-coroutine (Beta PHP7 Only)
 php的coroutine(协程\用户态线程)扩展 支持多层函数调用中yield
 
 
