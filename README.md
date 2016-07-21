@@ -25,12 +25,9 @@ result:123
 ##Methods
 ###Coroutine::__construct($callable)
   使用方法
-  1.传入函数名 
-    $co = new Coroutine("run");
-  2.传入类方法
-    $co = new Coroutine([$object,"methodName"]);
-  3.传入闭包(Closure)
-    $co = new Coroutine(function(){});
+  1.传入函数名:$co = new Coroutine("run");
+  2.传入类方法:$co = new Coroutine([$object,"methodName"]);
+  3.传入闭包(Closure):$co = new Coroutine(function(){});
 ###Coroutine::resume()
 ###Coroutine::yield()
 ###Coroutine::running()
