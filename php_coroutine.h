@@ -137,8 +137,14 @@ static zend_always_inline void i_init_execute_data(zend_execute_data *execute_da
 }
 /* }}} */
 
+struct _coroutine_function_hook{
+	void* raw_ptr;
+	zend_function *target_function;
+	zend_fcall_info fci;
+	zend_fcall_info_cache fci_cache;
+};
 
-
+typedef struct _coroutine_function_hook coroutine_function_hook;
 
 
 struct _coroutine_context{
@@ -158,7 +164,7 @@ struct _coroutine_context{
 	char status;
 
 	HashTable  *shutdown_function_names;
-
+	HashTable  *function_hook;
 
 };
 

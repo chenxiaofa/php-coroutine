@@ -42,6 +42,50 @@ enum COROUTINE_STATUS{
 };
 
 
+PHP_FUNCTION(hook_function_handler)
+{
+	//( zif_setcookie *)0(execute_data,return_value);
+	//void * (*php_function_ptr)(zend_execute_data *,zval*);
+	//php_function_ptr = raw_ptr;
+//	if (zend_parse_parameters(ZEND_NUM_ARGS(), "*" , &fci.params, &fci.param_count) == FAILURE) {
+//		return;
+//	}
+//	zval retval;
+//	fci.retval = &retval;
+//	zend_call_function(&fci, &fci_cache);
+
+	if (NULL == CURRCO(function_hook))
+	{
+		RETURN_FALSE;
+	}	
+
+	
+
+	
+	coroutine_function_hook *hook = zend_hash_find_ptr(CURRCO(function_hook),execute_data->func->common.function_name);
+
+	if (NULL == hook)
+	{
+		RETURN_FALSE;
+	}
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "*" , &hook->fci.params,&hook->fci.param_count) == FAILURE) {
+		RETURN_FALSE;
+	}
+
+	zval retval;
+	ZVAL_NULL(&retval);
+	hook->fci.retval = &retval;
+
+	if (zend_call_function(&hook->fci,&hook->fci_cache) == SUCCESS && Z_TYPE(retval) != IS_UNDEF) {
+		ZVAL_COPY_VALUE(return_value, &retval);
+	}
+	
+	//php_printf("hook_function_handler");
+}
+/* }}} */
+
+
 /* 备份当前执行环境 */
 /* {{{ coroutine_backup_executor 
  */
@@ -156,8 +200,6 @@ void zend_always_inline coroutine_build_execute_data(coroutine_context *ctx)
 		ctx->fci_cache->object
 	);
 
-
-	
 	
 	ctx->top_execute_data->symbol_table = NULL;
 
@@ -201,6 +243,8 @@ void zend_always_inline coroutine_destory_context(coroutine_context *ctx)
 	zend_execute_data *ex = ctx->execute_data?ctx->execute_data:ctx->top_execute_data;
 	coroutine_free_vm_stack_call_frame(ex);
 
+	zend_hash_destroy(ctx->function_hook); 
+	
 
 	zend_vm_stack_destroy();
 	efree(ctx->fci_cache);
@@ -226,6 +270,10 @@ static zend_always_inline zend_vm_stack coroutine_vm_stack_new_page() {
 }
 /* }}} */
 
+void hook_function_dtor(void *ptr)
+{
+	efree(ptr);
+}
 
 /* 初始化协程上下文 */
 /* {{{ coroutine_init_context 
@@ -235,13 +283,17 @@ static zend_always_inline void coroutine_init_context(zend_object *object,corout
 	ctx->shutdown_function_names = NULL;
 	ctx->stack = coroutine_vm_stack_new_page();
 	ctx->status = COROUTINE_STATUS_SUSPEND; 
-
+	
 	ctx->top_execute_data = ctx->execute_data = NULL;
 
 	ctx->this_obj = object;
 	
 	ctx->fci_cache = fci_cache;
 
+	ALLOC_HASHTABLE(ctx->function_hook);
+
+	zend_hash_init(ctx->function_hook, 0, NULL, hook_function_dtor, 0);
+	
 	coroutine_build_execute_data(ctx);
 }
 /* }}} */
@@ -270,8 +322,12 @@ void resume_coroutine(coroutine_context *ctx)
 	EG(vm_stack) = ctx->stack;
 	BG(user_shutdown_function_names)  = ctx->shutdown_function_names;
 
+	coroutine_function_hook *fh = NULL;
 
-	
+	ZEND_HASH_FOREACH_PTR(ctx->function_hook,fh){
+		fh->raw_ptr = fh->target_function->internal_function.handler;
+		fh->target_function->internal_function.handler = PHP_FN(hook_function_handler);
+	}ZEND_HASH_FOREACH_END();
 	
 
 
@@ -463,16 +519,70 @@ ZEND_METHOD(coroutine,resume)
 /* }}} */
 
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_coroutine_hook, 0, 0, 2)
+	ZEND_ARG_TYPE_INFO(0, function_name,IS_STRING,0)
+	ZEND_ARG_CALLABLE_INFO(0, new_function,0)
+ZEND_END_ARG_INFO()
+
+/* {{{ proto bool setcookie(string name [, string value [, int expires [, string path [, string domain [, bool secure[, bool httponly]]]]]])
+   Send a cookie */
+
+
+
+
+
+
+/* {{{ CoThread::hook() 
+ */
+ZEND_METHOD(coroutine,hook)
+{
+	char *function_name;
+	size_t function_name_len;
+	zend_fcall_info fci;
+	zend_fcall_info_cache fci_cache;
+	coroutine_function_hook *fh = NULL;
+	
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "pf" , &function_name, &function_name_len, &fci, &fci_cache) == FAILURE) {
+		RETURN_FALSE;
+	}
+
+
+
+	coroutine_context *ctx = Z_COROUTINE_CONTEXT_P(getThis());
+	if (NULL == ctx) {
+		RETURN_FALSE;
+	}
+
+	zval *func = zend_hash_str_find(EG(function_table),function_name,function_name_len);
+	if (NULL == func) {
+		RETURN_FALSE;
+	}
+//	
+
+	fh = malloc(sizeof(coroutine_function_hook));
+
+	fh->target_function = Z_FUNC_P(func);
+
+	memcpy(&fh->fci,&fci,sizeof(zend_fcall_info));
+	memcpy(&fh->fci_cache,&fci_cache,sizeof(zend_fcall_info_cache));
+
+	zend_hash_str_update_ptr(ctx->function_hook,function_name,function_name_len,fh);
+
+	RETURN_TRUE;
+}
+/* }}} */
+
 
 /* CoThread class method entry */
-/* {{{ coroutine_method */
+/* {{{ coroutine_method */ 
 static zend_function_entry coroutine_method[] = {
 	ZEND_ME(coroutine,  	yield						,  NULL,   ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
-	ZEND_ME(coroutine,  	running		,  NULL,   ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+	ZEND_ME(coroutine,  	running					,  NULL,   ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	ZEND_ME(coroutine,	__construct					,  NULL,   ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
 	ZEND_ME(coroutine,	__destruct					,  NULL,   ZEND_ACC_PUBLIC|ZEND_ACC_DTOR|ZEND_ACC_FINAL)
 	ZEND_ME(coroutine,	resume						,  NULL,   ZEND_ACC_PUBLIC)
 	ZEND_ME(coroutine,	reset						,  NULL,   ZEND_ACC_PUBLIC)
+	ZEND_ME(coroutine,	hook						,  arginfo_coroutine_hook,   ZEND_ACC_PUBLIC)
 
     { NULL, NULL, NULL }
 };
@@ -507,6 +617,9 @@ static void php_coroutine_init_globals(zend_coroutine_globals *coroutine_globals
 	coroutine_globals->global_string = NULL;
 }
 */
+
+
+
 /* }}} */
 
 /* {{{ PHP_MINIT_FUNCTION
@@ -529,7 +642,6 @@ PHP_MINIT_FUNCTION(coroutine)
     zend_declare_property_long(coroutine_ce, "context", strlen("context"),0, ZEND_ACC_PRIVATE TSRMLS_CC);
     zend_declare_property_long(coroutine_ce, "callable", strlen("callable"),0, ZEND_ACC_PRIVATE TSRMLS_CC);
 
-	
 	
 	return SUCCESS;
 }
