@@ -1,6 +1,6 @@
 # php-coroutine (Beta PHP7 Only)
 php的coroutine(协程\用户态线程)扩展 支持多层函数调用中yield
-
+第二版正在开发中,将会解决无法从call_user_func中yield的问题
 
 
 ##使用方法
