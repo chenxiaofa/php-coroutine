@@ -1,6 +1,5 @@
 # php-coroutine (Beta PHP7 Only)
 php的coroutine(协程\用户态线程)扩展 支持多层函数调用中yield
-第二版正在开发中,将会解决无法从call_user_func中yield的问题
 
 
 ##使用方法
@@ -60,3 +59,6 @@ Access:Public
 1. 当前版本不支持在协程中对另一个协程resume操作
 2. 协程中会对register_shutdown_function的函数进行拦截,并在协程结束后调用
 3. 不能在内部函数回调后 Coroutine->yield,必须等内部函数全部执行完后才能Coroutine->yield
+
+#to be continued
+* 第二版正在开发中,将会解决无法从call_user_func中yield的问题
